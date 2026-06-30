@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: metrics-server
+      app.kubernetes.io/name: metrics-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: metrics-server
+        app.kubernetes.io/name: metrics-server
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccountName: metrics-server
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                  - metrics-server
+
+      containers:
+      - name: metrics-server
+        image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/metrics-server:v0.8.1-eksbuild.11
+        imagePullPolicy: IfNotPresent
+
+        args:
+        - --secure-port=10251
+        - --cert-dir=/tmp
+        - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+        - --kubelet-use-node-status-port
+        - --metric-resolution=15s
+
+        ports:
+        - containerPort: 10251
+          name: https
+
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            memory: 400Mi
+
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          readOnlyRootFilesystem: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: https
+            scheme: HTTPS
+
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: https
+            scheme: HTTPS
+          initialDelaySeconds: 20
+
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+
+      volumes:
+      - name: tmp
+        emptyDir: {}
