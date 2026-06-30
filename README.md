@@ -78,4 +78,4 @@ kubectl get pods -n exercise6
 After resolving the issue, the Cluster Autoscaler logs show a `Scale-up` event. Running `kubectl get nodes` will reveal a new EC2 instance joining the cluster and transitioning to `Ready`. Finally, `kubectl get pods -n exercise6` will show the previously `Pending` pods transitioning to `Running`.
 
 ## Demo Video Link
-[Insert Demo Video Link Here]
+[https://drive.google.com/file/d/1AkdDaiyTFZkePx0ZrW4XEDogqnc_5dAm/view?usp=sharing]
